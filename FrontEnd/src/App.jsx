@@ -33,7 +33,10 @@ const emptyUser = {
   role: 'user'
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || ''
+const DEFAULT_API_URL = 'https://mobileproject-production-5937.up.railway.app'
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || (import.meta.env.PROD ? DEFAULT_API_URL : '')
+).replace(/\/$/, '')
 const apiUrl = (path) => `${API_BASE_URL}${path}`
 
 const money = new Intl.NumberFormat('en-PK', {
@@ -116,7 +119,12 @@ function App() {
 
   const readJson = async (response) => {
     const text = await response.text()
-    const data = text ? JSON.parse(text) : {}
+    const contentType = response.headers.get('content-type') || ''
+    const data = text && contentType.includes('application/json') ? JSON.parse(text) : {}
+
+    if (text && !contentType.includes('application/json')) {
+      throw new Error(`Expected JSON from ${response.url}, received ${contentType || 'unknown response type'}`)
+    }
 
     if (!response.ok) {
       throw new Error(data.errors?.join(', ') || data.message || data.error || 'Request failed')

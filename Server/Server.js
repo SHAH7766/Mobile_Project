@@ -12,7 +12,12 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 app.use(express.json());
-app.use(cors())
+app.use(cors({
+    origin: [
+        "https://mobileproject-production-5937.up.railway.app",
+        "http://localhost:5173"
+    ]
+}))
 app.use(express.static(path.join(__dirname, "public")))
 app.use("/api/user", userRoute);
 app.use("/api/product", productRoute);
