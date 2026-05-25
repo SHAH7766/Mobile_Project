@@ -33,6 +33,9 @@ const emptyUser = {
   role: 'user'
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || ''
+const apiUrl = (path) => `${API_BASE_URL}${path}`
+
 const money = new Intl.NumberFormat('en-PK', {
   style: 'currency',
   currency: 'PKR',
@@ -128,8 +131,8 @@ function App() {
       showNotice('idle', 'Refreshing')
 
       const [productData, userData] = await Promise.all([
-        fetch('/api/product').then(readJson),
-        fetch('/api/user').then(readJson)
+        fetch(apiUrl('/api/product')).then(readJson),
+        fetch(apiUrl('/api/user')).then(readJson)
       ])
 
       setProducts(productData.products || [])
@@ -178,7 +181,7 @@ function App() {
         formData.append('image', productImage)
       }
 
-      const url = editingProductId ? `/api/product/${editingProductId}` : '/api/product'
+      const url = editingProductId ? apiUrl(`/api/product/${editingProductId}`) : apiUrl('/api/product')
       const method = editingProductId ? 'PUT' : 'POST'
 
       await fetch(url, {
@@ -212,7 +215,7 @@ function App() {
   const deleteProduct = async (productId) => {
     try {
       setLoading(true)
-      await fetch(`/api/product/${productId}`, { method: 'DELETE' }).then(readJson)
+      await fetch(apiUrl(`/api/product/${productId}`), { method: 'DELETE' }).then(readJson)
       await loadDashboard()
       showNotice('success', 'Product deleted')
     } catch (error) {
@@ -233,7 +236,7 @@ function App() {
         delete payload.password
       }
 
-      const url = editingUserId ? `/api/user/${editingUserId}` : '/api/user/register'
+      const url = editingUserId ? apiUrl(`/api/user/${editingUserId}`) : apiUrl('/api/user/register')
       const method = editingUserId ? 'PUT' : 'POST'
 
       await fetch(url, {
@@ -267,7 +270,7 @@ function App() {
   const deleteUser = async (userId) => {
     try {
       setLoading(true)
-      await fetch(`/api/user/${userId}`, { method: 'DELETE' }).then(readJson)
+      await fetch(apiUrl(`/api/user/${userId}`), { method: 'DELETE' }).then(readJson)
       await loadDashboard()
       showNotice('success', 'User deleted')
     } catch (error) {
