@@ -10,13 +10,22 @@ import userRoute from "./Routes/UserRoute.js"
 import productRoute from "./Routes/ProductRoute.js"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const allowedOrigins = [
+    
+    "https://buynova.vercel.app",
+    "http://localhost:5173"
+]
+const vercelPreviewOriginRegex = /^https:\/\/mobile-project-[a-z0-9-]+-shah7766s-projects\.vercel\.app$/i
 
 app.use(express.json());
 app.use(cors({
-    origin: [
-        "https://mobileproject-production-5937.up.railway.app",
-        "http://localhost:5173"
-    ]
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || vercelPreviewOriginRegex.test(origin)) {
+            return callback(null, true)
+        }
+
+        callback(new Error("Not allowed by CORS"))
+    }
 }))
 app.use(express.static(path.join(__dirname, "public")))
 app.use("/api/user", userRoute);
