@@ -9,22 +9,48 @@ const removePassword = (user) => {
     return userObject
 }
 
+const sendErrorResponse = (res, status, message, errors = []) => {
+    return res.status(status).json({
+        success: false,
+        message,
+        errors
+    })
+}
+
+const getDuplicateErrors = (users, { email, name }) => {
+    const errors = []
+
+    if (email && users.some((user) => user.email === email)) {
+        errors.push("Email is already in use")
+    }
+
+    if (name && users.some((user) => user.name === name)) {
+        errors.push("Name is already in use")
+    }
+
+    return errors
+}
+
+const getDuplicateKeyErrors = (error) => {
+    const field = Object.keys(error.keyPattern || {})[0] || "field"
+    return [`${field} is already in use`]
+}
+
 export const RegisterUser = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        const existingUser = await User.findOne({
+        const existingUsers = await User.find({
             $or: [
                 { email },
                 { name }
             ]
         })
 
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                message: existingUser.email === email ? "Email is already in use" : "Name is already in use"
-            })
+        const errors = getDuplicateErrors(existingUsers, { email, name })
+
+        if (errors.length > 0) {
+            return sendErrorResponse(res, 409, "User already exists", errors)
         }
 
         const userCount = await User.countDocuments()
@@ -45,18 +71,14 @@ export const RegisterUser = async (req, res) => {
     }
     catch (error) {
         if (error.code === 11000) {
-            const field = Object.keys(error.keyPattern || {})[0] || "field"
-
-            return res.status(409).json({
-                success: false,
-                message: `${field} is already in use`
-            })
+            return sendErrorResponse(res, 409, "User already exists", getDuplicateKeyErrors(error))
         }
 
         res.status(500).json({
             success: false,
             message: "Error registering user",
-            error: error.message
+            error: error.message,
+            errors: [error.message]
         })
     }
 }
@@ -68,19 +90,13 @@ export const LoginUser = async (req, res) => {
         const user = await User.findOne({ email: String(email).trim().toLowerCase() })
 
         if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid email or password"
-            })
+            return sendErrorResponse(res, 401, "Invalid email or password", ["Invalid email or password"])
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password)
 
         if (!isPasswordValid) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid email or password"
-            })
+            return sendErrorResponse(res, 401, "Invalid email or password", ["Invalid email or password"])
         }
 
         const token = jwt.sign(
@@ -107,7 +123,8 @@ export const LoginUser = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error logging in user",
-            error: error.message
+            error: error.message,
+            errors: [error.message]
         })
     }
 }
@@ -125,7 +142,8 @@ export const GetUsers = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching users",
-            error: error.message
+            error: error.message,
+            errors: [error.message]
         })
     }
 }
@@ -135,10 +153,7 @@ export const GetProfile = async (req, res) => {
         const user = await User.findById(req.user.id).select("-password")
 
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            })
+            return sendErrorResponse(res, 404, "User not found", ["User not found"])
         }
 
         res.status(200).json({
@@ -150,7 +165,8 @@ export const GetProfile = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching profile",
-            error: error.message
+            error: error.message,
+            errors: [error.message]
         })
     }
 }
@@ -160,10 +176,7 @@ export const GetUserById = async (req, res) => {
         const user = await User.findById(req.params.id).select("-password")
 
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            })
+            return sendErrorResponse(res, 404, "User not found", ["User not found"])
         }
 
         res.status(200).json({
@@ -175,7 +188,8 @@ export const GetUserById = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error fetching user",
-            error: error.message
+            error: error.message,
+            errors: [error.message]
         })
     }
 }
@@ -185,10 +199,7 @@ export const UpdateUser = async (req, res) => {
         const user = await User.findById(req.params.id)
 
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            })
+            return sendErrorResponse(res, 404, "User not found", ["User not found"])
         }
 
         const { name, email, password, role } = req.body
@@ -199,16 +210,15 @@ export const UpdateUser = async (req, res) => {
             if (email && email !== user.email) conditions.push({ email })
             if (name && name !== user.name) conditions.push({ name })
 
-            const existingUser = await User.findOne({
+            const existingUsers = await User.find({
                 _id: { $ne: new mongoose.Types.ObjectId(req.params.id) },
                 $or: conditions
             })
 
-            if (existingUser) {
-                return res.status(409).json({
-                    success: false,
-                    message: existingUser.email === email ? "Email is already in use" : "Name is already in use"
-                })
+            const errors = getDuplicateErrors(existingUsers, { email, name })
+
+            if (errors.length > 0) {
+                return sendErrorResponse(res, 409, "User already exists", errors)
             }
         }
 
@@ -227,18 +237,14 @@ export const UpdateUser = async (req, res) => {
     }
     catch (error) {
         if (error.code === 11000) {
-            const field = Object.keys(error.keyPattern || {})[0] || "field"
-
-            return res.status(409).json({
-                success: false,
-                message: `${field} is already in use`
-            })
+            return sendErrorResponse(res, 409, "User already exists", getDuplicateKeyErrors(error))
         }
 
         res.status(500).json({
             success: false,
             message: "Error updating user",
-            error: error.message
+            error: error.message,
+            errors: [error.message]
         })
     }
 }
@@ -248,10 +254,7 @@ export const DeleteUser = async (req, res) => {
         const user = await User.findById(req.params.id)
 
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            })
+            return sendErrorResponse(res, 404, "User not found", ["User not found"])
         }
 
         await user.deleteOne()
@@ -265,7 +268,8 @@ export const DeleteUser = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error deleting user",
-            error: error.message
+            error: error.message,
+            errors: [error.message]
         })
     }
 }
