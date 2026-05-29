@@ -91,7 +91,7 @@ export const LoginUser = async (req, res) => {
         const user = await User.findOne({ email: String(email).trim().toLowerCase() })
 
         if (!user) {
-            return sendErrorResponse(res, 401, "Invalid email or password", ["Invalid email or password"])
+            return sendErrorResponse(res, 404, "Account not found", ["Account not found"])
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password)
