@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 import { User } from "../Models/User.model.js"
+import { sendLoginAlert } from '../Utils/Login.Email.js'
 
 const removePassword = (user) => {
     const userObject = user.toObject()
@@ -111,7 +112,7 @@ export const LoginUser = async (req, res) => {
                 expiresIn: process.env.JWT_EXPIRES_IN || "7d"
             }
         )
-
+        sendLoginAlert(user.email) // 🟢 Send login alert email on successful login
         res.status(200).json({
             success: true,
             message: "User logged in successfully",
