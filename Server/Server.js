@@ -27,12 +27,26 @@ app.use(cors({
         callback(new Error("Not allowed by CORS"))
     }
 }))
+app.get("/", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "BuyNova API is running"
+    })
+})
+
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        success: true,
+        status: "ok"
+    })
+})
+
 app.use(express.static(path.join(__dirname, "public")))
 app.use("/api/user", userRoute);
 app.use("/api/product", productRoute);
 dotenv.config();
 const port = process.env.PORT || process.env.port || 8000;
-app.listen(port, () => {
+app.listen(port, "0.0.0.0", () => {
     console.log(`Server is running on port ${port}`.bgMagenta);
 })
 connectToDatabase();
