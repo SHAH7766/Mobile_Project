@@ -15,9 +15,10 @@
   "name": "food_app",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "Server.js",
   "scripts": {
-    "start": "nodemon Server.js"
+    "start": "node Server.js",
+    "dev": "nodemon Server.js"
   },
   "keywords": [],
   "author": "",
