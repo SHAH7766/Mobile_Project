@@ -127,3 +127,45 @@ export const validateProductUpdate = (req, res, next) => {
 
     next()
 }
+
+export const validateOrderCreate = (req, res, next) => {
+    const errors = []
+    const { items, shippingAddress } = req.body
+
+    if (!Array.isArray(items) || items.length === 0) {
+        errors.push("At least one order item is required")
+    }
+    else {
+        items.forEach((item, index) => {
+            const itemNumber = index + 1
+
+            if (!item || typeof item !== "object") {
+                errors.push(`Item ${itemNumber} must be an object`)
+                return
+            }
+
+            const quantity = Number(item.quantity)
+
+            if (isBlank(item.productId)) {
+                errors.push(`Product id is required for item ${itemNumber}`)
+            }
+            else if (!objectIdRegex.test(item.productId)) {
+                errors.push(`Product id is invalid for item ${itemNumber}`)
+            }
+
+            if (isBlank(item.quantity) || !Number.isInteger(quantity) || quantity <= 0) {
+                errors.push(`Quantity must be a positive whole number for item ${itemNumber}`)
+            }
+        })
+    }
+
+    if (isBlank(shippingAddress)) {
+        errors.push("Shipping address is required")
+    }
+
+    if (errors.length > 0) {
+        return sendValidationErrors(res, errors)
+    }
+
+    next()
+}

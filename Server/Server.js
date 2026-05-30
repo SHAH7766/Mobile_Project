@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 const app = express();
 import { connectToDatabase } from "./Config/DatabaseConnection.js"
 import dotenv from 'dotenv';
+import orderRoute from "./Routes/OrderRoutes.js"
 import userRoute from "./Routes/UserRoute.js"
 import productRoute from "./Routes/ProductRoute.js"
 import devRoute from "./Routes/DevRoute.js"
@@ -45,9 +46,23 @@ app.get("/health", (req, res) => {
 app.use(express.static(path.join(__dirname, "public")))
 app.use("/api/user", userRoute);
 app.use("/api/product", productRoute);
+app.use("/api/orders", orderRoute);
 if (process.env.NODE_ENV !== 'production') {
     app.use("/api/dev", devRoute);
 }
+
+app.use((error, req, res, next) => {
+    if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid JSON body",
+            errors: ["Send a valid JSON object, not a quoted JSON string"]
+        })
+    }
+
+    next(error)
+})
+
 dotenv.config();
 const port = process.env.PORT || process.env.port || 8000;
 app.listen(port, "0.0.0.0", () => {
