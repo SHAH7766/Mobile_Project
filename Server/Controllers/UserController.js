@@ -112,7 +112,8 @@ export const LoginUser = async (req, res) => {
                 expiresIn: process.env.JWT_EXPIRES_IN || "7d"
             }
         )
-        sendLoginAlert(user.email) // 🟢 Send login alert email on successful login
+        // Send login alert email on successful login (non-blocking, errors logged)
+        sendLoginAlert(user.email).catch(err => console.error('Failed to send login alert:', err));
         res.status(200).json({
             success: true,
             message: "User logged in successfully",

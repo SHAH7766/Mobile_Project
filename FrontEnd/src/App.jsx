@@ -33,7 +33,7 @@ const emptyUser = {
   role: 'user'
 }
 
-const DEFAULT_API_URL = 'https://mobileproject-production-5937.up.railway.app'
+const DEFAULT_API_URL = 'https://mobileproject-production-aa28.up.railway.app'
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL || (import.meta.env.PROD ? DEFAULT_API_URL : '')
 ).replace(/\/$/, '')

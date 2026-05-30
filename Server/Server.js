@@ -8,6 +8,7 @@ import { connectToDatabase } from "./Config/DatabaseConnection.js"
 import dotenv from 'dotenv';
 import userRoute from "./Routes/UserRoute.js"
 import productRoute from "./Routes/ProductRoute.js"
+import devRoute from "./Routes/DevRoute.js"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const allowedOrigins = [
@@ -44,6 +45,9 @@ app.get("/health", (req, res) => {
 app.use(express.static(path.join(__dirname, "public")))
 app.use("/api/user", userRoute);
 app.use("/api/product", productRoute);
+if (process.env.NODE_ENV !== 'production') {
+    app.use("/api/dev", devRoute);
+}
 dotenv.config();
 const port = process.env.PORT || process.env.port || 8000;
 app.listen(port, "0.0.0.0", () => {
