@@ -67,3 +67,35 @@ export const GetUserOrders = async (req, res) => {
         })
     }
 }
+export const DeleteAllorders = async (req, res) => {
+    try {
+        await Orders.deleteMany({})
+        res.status(200).json({
+            success: true,
+            message: "All orders deleted successfully"
+        })
+    }   
+    catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error deleting orders",
+            error: error.message
+        })
+    }
+}
+export const GetAllOrders = async (req, res) => {
+    try {
+        const orders = await Orders.find().populate('items.productId', 'name price')
+        res.status(200).json({
+            success: true,
+            orders
+        })
+    }   
+    catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching orders",
+            error: error.message
+        })
+    }
+}

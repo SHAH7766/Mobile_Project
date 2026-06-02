@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import orderRoute from "./Routes/OrderRoutes.js"
 import userRoute from "./Routes/UserRoute.js"
 import productRoute from "./Routes/ProductRoute.js"
+import authRoutes from "./Routes/authRoutes.js"
 import devRoute from "./Routes/DevRoute.js"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -47,6 +48,7 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/api/user", userRoute);
 app.use("/api/product", productRoute);
 app.use("/api/orders", orderRoute);
+app.use("/api/auth", authRoutes);
 if (process.env.NODE_ENV !== 'production') {
     app.use("/api/dev", devRoute);
 }
