@@ -1,4 +1,4 @@
-import admin from '../config/firebase.js';
+import admin from '../Config/firebase.js';
 
 export const handleGoogleSignIn = async (req, res) => {
     try {
