@@ -1,57 +1,104 @@
+import 'dotenv/config';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-import User from '../models/userModel.js'; // 🟢 Adjust to your User model path
+import { User } from '../Models/User.model.js';
 
-const client = new OAuth2Client("943044275221-vtl9imnouk372fca2fgfmpub769mlhdb.apps.googleusercontent.com");
+const googleClientId = process.env.GOOGLE_CLIENT_ID || "943044275221-vtl9imnouk372fca2fgfmpub769mlhdb.apps.googleusercontent.com";
+const client = new OAuth2Client(googleClientId);
+
+const createAppToken = (user) => {
+    return jwt.sign(
+        {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+};
+
+const getAvailableName = async (preferredName, email) => {
+    const baseName = (preferredName || email.split('@')[0]).trim();
+    let candidate = baseName;
+    let suffix = 1;
+
+    while (await User.exists({ name: candidate })) {
+        suffix += 1;
+        candidate = `${baseName}${suffix}`;
+    }
+
+    return candidate;
+};
 
 export const googleLogin = async (req, res) => {
-    const { token } = req.body;
+    const { token, idToken } = req.body;
+    const googleToken = token || idToken;
 
     try {
-        // 1. Verify the incoming token
-        const ticket = await client.verifyIdToken({
-            idToken: token,
-            audience: "943044275221-vtl9imnouk372fca2fgfmpub769mlhdb.apps.googleusercontent.com",
-        });
-        
-        const payload = ticket.getPayload();
-        const { email, name, picture } = payload;
-
-        console.log(`Authenticated Google User: ${name} (${email})`);
-
-        // 2. Check if user already exists in MongoDB, if not, create them
-        let user = await User.findOne({ email });
-        
-        if (!user) {
-            user = await User.create({
-                name,
-                email,
-                avatar: picture,
-                isGoogleUser: true // Useful flag if you track OAuth vs Email users
-            });
-            console.log(`🆕 Created a new BuyNova user account for ${email}`);
+        if (!googleToken) {
+            return res.status(400).json({ success: false, message: "Missing Google token." });
         }
 
-        // 3. Generate your own custom BuyNova app JWT token
-        const appToken = jwt.sign(
-            { id: user._id, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-        );
+        if (!process.env.JWT_SECRET) {
+            return res.status(500).json({ success: false, message: "JWT secret is not configured." });
+        }
 
-        // 4. Send back the payload exactly how your Android App's AuthResponse models expect it
+        const ticket = await client.verifyIdToken({
+            idToken: googleToken,
+            audience: googleClientId
+        });
+
+        const payload = ticket.getPayload();
+
+        if (!payload?.sub || !payload?.email) {
+            return res.status(401).json({ success: false, message: "Invalid Google token payload." });
+        }
+
+        const { sub: googleId, email, name, picture } = payload;
+        const normalizedEmail = email.trim().toLowerCase();
+
+        console.log(`Authenticated Google User: ${name || "Unknown"} (${normalizedEmail})`);
+
+        let user = await User.findOne({ email: normalizedEmail });
+
+        if (!user) {
+            const availableName = await getAvailableName(name, normalizedEmail);
+
+            user = await User.create({
+                name: availableName,
+                email: normalizedEmail,
+                avatar: picture,
+                googleId,
+                isGoogleUser: true
+            });
+
+            console.log(`Created a new BuyNova user account for ${normalizedEmail}`);
+        } else {
+            user.googleId = user.googleId || googleId;
+            user.avatar = picture || user.avatar;
+            user.isGoogleUser = true;
+            await user.save();
+        }
+
+        const appToken = createAppToken(user);
+
         return res.status(200).json({
             success: true,
             token: appToken,
             user: {
                 id: user._id,
                 name: user.name,
-                email: user.email
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar
             }
         });
-
     } catch (error) {
-        console.error("❌ Token Verification Rejected:", error.message);
+        console.error("Token Verification Rejected:", error.message);
         return res.status(401).json({ success: false, message: "Invalid Google token authentication" });
     }
 };
+
+export const handleGoogleSignIn = googleLogin;
